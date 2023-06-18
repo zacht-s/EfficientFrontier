@@ -10,12 +10,11 @@ def risk(weights, cov_matrix):
     return np.matmul(np.matmul(weights, cov_matrix), weights)
 
 
-def efficient_frontier(mark_port, tgt_ret_vec=np.arange(5,15)/100):
+def efficient_frontier(mark_port, tgt_ret_vec=np.arange(2, 50, 3)/100):
     ret_vec, risk_vec, lev_vec = [], [], []
 
     for ret in tgt_ret_vec:
         mark_port.tgt_ret = ret
-        print(mark_port)
         mark_port.solve()
 
         ret_vec.append(ret)
@@ -26,7 +25,16 @@ def efficient_frontier(mark_port, tgt_ret_vec=np.arange(5,15)/100):
     print(risk_vec)
     print(lev_vec)
 
-    plt.plot(ret_vec, risk_vec)
+    plt.scatter(risk_vec, ret_vec)
+    plt.xlabel('Risk')
+    plt.ylabel('Return')
+    plt.title('Efficient Frontier')
+    plt.show()
+
+    plt.scatter(risk_vec, lev_vec)
+    plt.xlabel('Risk')
+    plt.ylabel('Leverage')
+    plt.title('Leverage Ratio vs Risk for Frontier')
     plt.show()
 
 
@@ -53,7 +61,8 @@ class Markowitz:
         start = trade_start - timedelta(days=lookback + 1)
         end = trade_start - timedelta(days=1)
         prices = yf.download(tickers=tickers, start=start, end=end)['Adj Close']
-        returns = prices.pct_change().dropna()
+        returns = np.log(prices) - np.log(prices).shift(1)
+        returns = returns.dropna()
         print('')
 
         self.avg_ret = returns.mean()
@@ -74,7 +83,7 @@ class Markowitz:
 
     def solve(self):
         w0 = np.ones(len(self.tickers))/len(self.tickers)
-        daily_tgt = (1+self.tgt_ret) ** (1/252) - 1
+        daily_tgt = self.tgt_ret / 252
 
         if self.long_only:
             bound = Bounds(lb=np.zeros(len(self.tickers)), ub=np.zeros(len(self.tickers))+self.max_holding)
@@ -82,15 +91,20 @@ class Markowitz:
             bound = Bounds(lb=np.zeros(len(self.tickers))-self.max_holding,
                            ub=np.zeros(len(self.tickers))+self.max_holding)
 
-        linear_constraint = LinearConstraint([np.ones(len(self.tickers)), self.avg_ret.to_numpy()],
-                                             lb=[1, daily_tgt], ub=[1, daily_tgt])
+        def exp_return(weights):
+            return np.matmul(self.avg_ret.to_numpy(), weights) - daily_tgt
 
+        def fully_invested(weights):
+            return weights.sum() - 1
+
+        cons = [{'type': 'eq', 'fun': exp_return},
+                {'type': 'eq', 'fun': fully_invested}]
 
         result = minimize(risk, w0, method='trust-constr',
-                          constraints=linear_constraint, bounds=bound,
+                          constraints=cons, bounds=bound,
                           args=(self.cov.to_numpy()), options={'verbose': 0})
 
-        self.holdings = pd.DataFrame(result.x, index=self.tickers)[0]
+        self.holdings = pd.DataFrame(result.x, index=self.cov.index)[0]
         self.volatility = risk(result.x, cov_matrix=self.cov.to_numpy()) ** (1/2) * 252 ** (1/2)
         self.leverage = abs(self.holdings).sum()
 
@@ -111,17 +125,12 @@ if __name__ == '__main__':
                'NKE', 'MRK', 'MMM', 'DIS', 'KO',
                'DOW', 'CSCO', 'VZ', 'INTC', 'WBA']
 
-    Mark1 = Markowitz(tickers=universe, trade_start=datetime(2023, 5, 1), lookback=60,
-                      max_holding=0.5, long_only=True, tgt_ret=0.05)
+
+    Mark1 = Markowitz(tickers=universe, trade_start=datetime(2023, 5, 1), lookback=365,
+                      max_holding=0.5, long_only=False, tgt_ret=0.05)
     #Mark1.solve()
-    #print(Mark1.holdings)
 
-    efficient_frontier(Mark1)
-
-    # Look into why efficient_frontier shape is off.
-
-
-
+    #efficient_frontier(Mark1)
 
 
 
