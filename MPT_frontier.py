@@ -1,12 +1,33 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from matplotlib import pyplot as plt
 from datetime import datetime, timedelta
 from scipy.optimize import minimize, Bounds, LinearConstraint
 
 
 def risk(weights, cov_matrix):
     return np.matmul(np.matmul(weights, cov_matrix), weights)
+
+
+def efficient_frontier(mark_port, tgt_ret_vec=np.arange(5,15)/100):
+    ret_vec, risk_vec, lev_vec = [], [], []
+
+    for ret in tgt_ret_vec:
+        mark_port.tgt_ret = ret
+        print(mark_port)
+        mark_port.solve()
+
+        ret_vec.append(ret)
+        risk_vec.append(mark_port.volatility)
+        lev_vec.append(mark_port.leverage)
+
+    print(ret_vec)
+    print(risk_vec)
+    print(lev_vec)
+
+    plt.plot(ret_vec, risk_vec)
+    plt.show()
 
 
 class Markowitz:
@@ -33,6 +54,7 @@ class Markowitz:
         end = trade_start - timedelta(days=1)
         prices = yf.download(tickers=tickers, start=start, end=end)['Adj Close']
         returns = prices.pct_change().dropna()
+        print('')
 
         self.avg_ret = returns.mean()
         self.cov = returns.cov()
@@ -41,7 +63,14 @@ class Markowitz:
         self.leverage = None
 
     def __repr__(self):
-        pass
+        desc = '\n'.join([
+            'This is a Markowitz Portfolio Object with...',
+            f'Target Return: {self.tgt_ret} and Max Individual Asset weight: {self.max_holding}',
+            f'The first day to buy this portfolio: {self.trade_start}',
+            f'Asset returns and risk data were estimated from a {self.lookback} day leading window',
+            ''
+        ])
+        return desc
 
     def solve(self):
         w0 = np.ones(len(self.tickers))/len(self.tickers)
@@ -61,15 +90,17 @@ class Markowitz:
                           constraints=linear_constraint, bounds=bound,
                           args=(self.cov.to_numpy()), options={'verbose': 0})
 
-        self.holdings = result.x
+        self.holdings = pd.DataFrame(result.x, index=self.tickers)[0]
         self.volatility = risk(result.x, cov_matrix=self.cov.to_numpy()) ** (1/2) * 252 ** (1/2)
-        # Add Leverage
+        self.leverage = abs(self.holdings).sum()
 
-        print('Solution Suceeded')
-        print(f'Expected Annual Return: {(np.matmul(result.x, self.avg_ret.to_numpy()) +1)**252-1}')
-        print(f'Annual Volatility: {self.volatility}')
-        print(f'Check Weight Sum {self.holdings.sum()}')
-        print('')
+
+        #print('Solution Suceeded')
+        #print(f'Expected Annual Return: {(np.matmul(result.x, self.avg_ret.to_numpy()) +1)**252-1}')
+        #print(f'Annual Volatility: {self.volatility}')
+        #print(f'Check Weight Sum {self.holdings.sum()}')
+        #print(f'Leverage Ratio: {self.leverage}')
+        #print('')
 
 
 if __name__ == '__main__':
@@ -82,8 +113,16 @@ if __name__ == '__main__':
 
     Mark1 = Markowitz(tickers=universe, trade_start=datetime(2023, 5, 1), lookback=60,
                       max_holding=0.5, long_only=True, tgt_ret=0.05)
-    Mark1.solve()
-    print(Mark1.holdings)
+    #Mark1.solve()
+    #print(Mark1.holdings)
+
+    efficient_frontier(Mark1)
+
+    # Look into why efficient_frontier shape is off.
+
+
+
+
 
 
 
