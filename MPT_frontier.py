@@ -128,9 +128,9 @@ if __name__ == '__main__':
 
     Mark1 = Markowitz(tickers=universe, trade_start=datetime(2023, 5, 1), lookback=365,
                       max_holding=0.5, long_only=False, tgt_ret=0.05)
-    #Mark1.solve()
+    Mark1.solve()
 
-    #efficient_frontier(Mark1)
+    efficient_frontier(Mark1)
 
 
 
