@@ -10,7 +10,7 @@ def risk(weights, cov_matrix):
     return np.matmul(np.matmul(weights, cov_matrix), weights)
 
 
-def efficient_frontier(mark_port, tgt_ret_vec=np.arange(2, 50, 3)/100):
+def efficient_frontier(mark_port, tgt_ret_vec=np.arange(2, 50, 3)/100, show=False):
     ret_vec, risk_vec, lev_vec = [], [], []
 
     for ret in tgt_ret_vec:
@@ -21,10 +21,10 @@ def efficient_frontier(mark_port, tgt_ret_vec=np.arange(2, 50, 3)/100):
         risk_vec.append(mark_port.volatility)
         lev_vec.append(mark_port.leverage)
 
-    print(ret_vec)
-    print(risk_vec)
-    print(lev_vec)
-
+    #print(ret_vec)
+    #print(risk_vec)
+    #print(lev_vec)
+    """
     plt.scatter(risk_vec, ret_vec)
     plt.xlabel('Risk')
     plt.ylabel('Return')
@@ -36,6 +36,22 @@ def efficient_frontier(mark_port, tgt_ret_vec=np.arange(2, 50, 3)/100):
     plt.ylabel('Leverage')
     plt.title('Leverage Ratio vs Risk for Frontier')
     plt.show()
+    """
+
+    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
+    ax1.set_title('Efficient Frontier')
+    ax1.set_ylabel('Return')
+    ax1.scatter(risk_vec, ret_vec)
+
+    ax2.set_title('Leverage Ratio vs Risk for Frontier')
+    ax2.set_xlabel('Risk')
+    ax2.set_ylabel('Leverage Ratio')
+    ax2.scatter(risk_vec, lev_vec)
+
+    if show:
+        plt.show()
+
+    return fig, (ax1, ax2)
 
 
 class Markowitz:
@@ -128,10 +144,11 @@ if __name__ == '__main__':
 
     Mark1 = Markowitz(tickers=universe, trade_start=datetime(2023, 5, 1), lookback=365,
                       max_holding=0.5, long_only=False, tgt_ret=0.05)
-    Mark1.solve()
+    #Mark1.solve()
 
-    efficient_frontier(Mark1)
+    fig, axes = efficient_frontier(Mark1, show=True)
 
+    fig.savefig('frontier_plot.png')
 
 
 

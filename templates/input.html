@@ -1,24 +1,44 @@
 {% extends 'base.html'%}
 
+{% block title %}
+Input
+{% endblock %}
+
 {% block content %}
     <div class="container"  style="max-height: 300px;overflow: auto;">
         <form method="POST">
+            <button>Get Holdings</button>
             <div class="row">
                 <div class="col">
-                    <label for="StartDate">Enter Trading Day:</label>
+                    <label for="StartDate">Select Trading Day:</label>
                     <input class="form-control" type="date" name="StartDate" id="StartDate">
                 </div>
                 <div class="col">
                     <label for="lookback">Number of Days in Return/Covariance Estimate:</label>
-                    <input class="form-control" type="number" name="lookback" id="lookback">
+                    <input class="form-control" type="number" name="lookback" id="lookback" placeholder="e.g. 100">
                 </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <label for="TgtReturn">Target Annual Return (%)</label>
+                    <input class="form-control" type="number" name="TgtReturn" id="TgtReturn" placeholder=" e.g. 10">
+                </div>
+                <div class="col">
+                    <label for="LongOnly">Long Only Portfolio?</label>
+                    <select class="form-select" name="LongOnly" id="LongOnly">
+                        <option value="False">False</option>
+                        <option value="True">True</option>
+                    </select>
+                </div>
+
             </div>
 
     <div class="row">
         <div class="form-check">
             {% for stock in stocks: %}
                 <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="universe" value={{stock}} id={{stock}}>
+                    <input type="checkbox" class="form-check-input" name="universe" value={{stock}} id={{stock}} checked>
                     <label class="form-check-label" for={{stock}}>
                         {{stock}}: {{stocks[stock]}}
                     </label>
@@ -26,8 +46,6 @@
             {% endfor %}
         </div>
     </div>
-
-            <button>Submit</button>
         </form>
     </div>
 {% endblock %}
